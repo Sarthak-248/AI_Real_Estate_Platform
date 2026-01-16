@@ -24,24 +24,32 @@ export default function FavoriteListings() {
     setLoading(true);
     setError(null);
     try {
-      const favoriteIds = JSON.parse(localStorage.getItem('favorites')) || [];
+      let favoriteIds = [];
+      
+      if (currentUser) {
+         favoriteIds = currentUser.favorites || [];
+      } else {
+         favoriteIds = JSON.parse(localStorage.getItem('favorites')) || [];
+      }
+
       if (favoriteIds.length === 0) {
         setFavorites([]);
         setLoading(false);
         return;
       }
-      const listings = [];
-      for (const id of favoriteIds) {
-        try {
-          const res = await axios.get(`/api/listing/get/${id}`);
-          listings.push(res.data);
-        } catch (err) {
-          console.error(`❌ Failed to fetch listing ${id}:`, err.message);
-        }
-      }
-      setFavorites(listings);
+      
+      const requests = favoriteIds.map(id => 
+        axios.get(`/api/listing/get/${id}`).then(res => res.data).catch(err => {
+             console.error(`❌ Failed to fetch listing ${id}:`, err.message);
+             return null;
+        })
+      );
+
+      const results = await Promise.all(requests);
+      setFavorites(results.filter(valid => valid !== null));
     } catch (err) {
       setError('Failed to load favorite listings.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -49,7 +57,7 @@ export default function FavoriteListings() {
 
   useEffect(() => {
     fetchFavorites();
-
+    
     const handleFavoritesUpdated = () => fetchFavorites();
     const onStorageChange = (event) => {
       if (event.key === 'favorites') fetchFavorites();
@@ -62,9 +70,8 @@ export default function FavoriteListings() {
       window.removeEventListener('favoritesUpdated', handleFavoritesUpdated);
       window.removeEventListener('storage', onStorageChange);
     };
-  }, []);
+  }, [currentUser]);
 
-  // Show loading and error states as usual
   if (loading) {
     return (
       <div className="text-center text-white p-8 bg-gradient-to-b from-blue-950 via-black to-blue-950 min-h-screen flex items-center justify-center">

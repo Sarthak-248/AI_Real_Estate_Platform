@@ -35,6 +35,14 @@ export default function SignUp() {
       }
       setLoading(false);
       setError(null);
+      // Clear client-side signals for a fresh account session
+      try {
+        localStorage.removeItem('favorites');
+        localStorage.removeItem('recentlyViewed');
+        localStorage.removeItem('lastSearch');
+      } catch (e) {
+        console.warn('Could not clear localStorage on signup', e);
+      }
       navigate('/sign-in');
     } catch (error) {
       setLoading(false);

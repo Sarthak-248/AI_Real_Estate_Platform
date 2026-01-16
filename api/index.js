@@ -5,10 +5,18 @@ import cors from 'cors';
 import userRouter from './routes/user.route.js';
 import authRouter from './routes/auth.route.js';
 import listingRouter from './routes/listing.route.js';
+import recommendationRouter from './routes/recommendation.route.js';
+import priceEstimationRouter from './routes/priceEstimation.route.js';
+import contactRouter from './routes/contact.route.js';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+// Load .env from project root
+const __filename = fileURLToPath(import.meta.url);
+const __dir = path.dirname(__filename);
+const projectRoot = path.resolve(__dir, '..');
+dotenv.config({ path: path.join(projectRoot, '.env') });
 
 mongoose
   .connect(process.env.MONGO)
@@ -22,6 +30,15 @@ mongoose
 const __dirname = path.resolve();
 const app = express();
 
+// ✅ Add global error handler for unhandled rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[FATAL] Uncaught Exception:', error);
+});
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -32,9 +49,20 @@ app.use(cors({
 }));
 
 // ✅ API routes
+console.log('[API] Setting up routes...');
 app.use('/api/user', userRouter);
+console.log('[API] /api/user route registered');
 app.use('/api/auth', authRouter);
+console.log('[API] /api/auth route registered');
 app.use('/api/listing', listingRouter);
+console.log('[API] /api/listing route registered');
+app.use('/api/recommendations', recommendationRouter);
+console.log('[API] /api/recommendations route registered');
+app.use('/api/price-estimate', priceEstimationRouter);
+console.log('[API] /api/price-estimate route registered');
+app.use('/api/contact', contactRouter);
+console.log('[API] /api/contact route registered');
+console.log('[API] All routes registered successfully');
 
 // ✅ Serve static files from ../client/dist
 app.use(express.static(path.join(__dirname, '/client/dist')));
@@ -49,6 +77,8 @@ app.get('*', (req, res) => {
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
+  // Log full error for debugging
+  console.error('Unhandled error:', err && err.stack ? err.stack : err);
   return res.status(statusCode).json({
     success: false,
     statusCode,
@@ -57,6 +87,20 @@ app.use((err, req, res, next) => {
 });
 
 // ✅ Start server
-app.listen(3000, () => {
+const server = app.listen(3000, '127.0.0.1', () => {
   console.log('Server is running on port 3000!');
+});
+
+server.on('error', (error) => {
+  console.error('[ERROR] Server error:', error);
+});
+
+// ✅ Handle uncaught exceptions
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[FATAL] Uncaught Exception:', error);
+  process.exit(1);
 });

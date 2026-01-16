@@ -17,12 +17,18 @@ export default function Search() {
     order: 'desc',
     bedrooms: 'any',
     bathrooms: 'any',
+    city: '',
+    minBudget: '',
+    maxBudget: '',
+    minArea: '',
+    maxArea: '',
   });
 
   const [loading, setLoading] = useState(false);
   const [listings, setListings] = useState([]);
   const [compareMode, setCompareMode] = useState(false);
   const [selectedListings, setSelectedListings] = useState([]);
+  const [areaError, setAreaError] = useState('');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,7 +55,12 @@ export default function Search() {
       sortFromUrl ||
       orderFromUrl ||
       bedroomsFromUrl ||
-      bathroomsFromUrl
+      bathroomsFromUrl ||
+      urlParams.get('city') ||
+      urlParams.get('minBudget') ||
+      urlParams.get('maxBudget') ||
+      urlParams.get('minArea') ||
+      urlParams.get('maxArea')
     ) {
       setSidebardata({
         searchTerm: searchTermFromUrl || '',
@@ -61,15 +72,31 @@ export default function Search() {
         order: orderFromUrl || 'desc',
         bedrooms: bedroomsFromUrl || 'any',
         bathrooms: bathroomsFromUrl || 'any',
+        city: urlParams.get('city') || '',
+        minBudget: urlParams.get('minBudget') || '',
+        maxBudget: urlParams.get('maxBudget') || '',
+        minArea: urlParams.get('minArea') || '',
+        maxArea: urlParams.get('maxArea') || '',
       });
     }
 
     const fetchListings = async () => {
       setLoading(true);
       const searchQuery = urlParams.toString();
-      const res = await fetch(`/api/listing/get?${searchQuery}`);
-      const data = await res.json();
-      setListings(data);
+      try {
+        const res = await fetch(`/api/listing/get?${searchQuery}`);
+        const text = await res.text();
+        if (!res.ok) {
+          let msg = `Request failed: ${res.status}`;
+          try { const parsed = JSON.parse(text); msg = parsed.message || parsed.error || msg; } catch (e) {}
+          throw new Error(msg);
+        }
+        const data = text ? JSON.parse(text) : [];
+        setListings(data);
+      } catch (err) {
+        console.error('Failed to fetch listings:', err.message || err);
+        setListings([]);
+      }
       setLoading(false);
     };
 
@@ -78,9 +105,19 @@ export default function Search() {
 
   const handleChange = (e) => {
     const { id, value } = e.target;
-
-    if (id === 'type' || id === 'searchTerm' || id === 'bedrooms' || id === 'bathrooms') {
-      setSidebardata({ ...sidebardata, [id]: value });
+    // Handle basic inputs including area validation
+    if (['type', 'searchTerm', 'bedrooms', 'bathrooms', 'city', 'minBudget', 'maxBudget', 'minArea', 'maxArea'].includes(id)) {
+      const next = { ...sidebardata, [id]: value };
+      setSidebardata(next);
+      // Validate min/max area when either changes
+      const min = next.minArea !== '' && next.minArea !== null ? Number(next.minArea) : null;
+      const max = next.maxArea !== '' && next.maxArea !== null ? Number(next.maxArea) : null;
+      if (min !== null && max !== null && !Number.isNaN(min) && !Number.isNaN(max) && min > max) {
+        setAreaError('Min area must be less than or equal to Max area');
+      } else {
+        setAreaError('');
+      }
+      return;
     }
 
     if (id === 'amenities') {
@@ -90,11 +127,13 @@ export default function Search() {
         parking: selected.includes('parking'),
         furnished: selected.includes('furnished'),
       });
+      return;
     }
 
     if (id === 'sort_order') {
       const [sort, order] = value.split('_');
       setSidebardata({ ...sidebardata, sort, order });
+      return;
     }
   };
   const handleRemoveListing = (id) => {
@@ -104,12 +143,30 @@ export default function Search() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Prevent submission if area range is invalid
+    const min = sidebardata.minArea !== '' && sidebardata.minArea !== null ? Number(sidebardata.minArea) : null;
+    const max = sidebardata.maxArea !== '' && sidebardata.maxArea !== null ? Number(sidebardata.maxArea) : null;
+    if (min !== null && max !== null && !Number.isNaN(min) && !Number.isNaN(max) && min > max) {
+      setAreaError('Min area must be less than or equal to Max area');
+      return;
+    }
     const urlParams = new URLSearchParams();
-    Object.entries(sidebardata).forEach(([key, value]) =>
-      urlParams.set(key, value)
-    );
+    Object.entries(sidebardata).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') urlParams.set(key, value);
+    });
     navigate(`/search?${urlParams.toString()}`);
+    // Save lastSearch to localStorage for recommender usage
+    const lastSearch = {
+      budget: sidebardata.maxBudget ? Number(sidebardata.maxBudget) : (sidebardata.minBudget ? Number(sidebardata.minBudget) : null),
+      city: sidebardata.city || null,
+      bedrooms: sidebardata.bedrooms && sidebardata.bedrooms !== 'any' ? Number(sidebardata.bedrooms) : null,
+      areaMin: sidebardata.minArea ? Number(sidebardata.minArea) : null,
+      areaMax: sidebardata.maxArea ? Number(sidebardata.maxArea) : null,
+    };
+    try { localStorage.setItem('lastSearch', JSON.stringify(lastSearch)); } catch (err) { console.warn('Could not save lastSearch', err); }
     setCurrentPage(1); // Reset to first page
+    // Notify other components that lastSearch changed
+    try { window.dispatchEvent(new Event('lastSearchUpdated')); } catch (e) { /* ignore */ }
   };
 
   const toggleCompareMode = () => {
@@ -174,6 +231,42 @@ export default function Search() {
               <option value="sale">Sale</option>
             </select>
           </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold">City:</label>
+            <input
+              id="city"
+              value={sidebardata.city}
+              onChange={handleChange}
+              placeholder="City name"
+              className="bg-[#1f1f1f] border border-yellow-500 text-yellow-200 rounded-lg p-3 w-full"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="font-semibold">Min Budget ($):</label>
+              <input id="minBudget" value={sidebardata.minBudget} onChange={handleChange} type="number" placeholder="Min" className="bg-[#1f1f1f] border border-yellow-500 text-yellow-200 rounded-lg p-3 w-full" />
+            </div>
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="font-semibold">Max Budget ($):</label>
+              <input id="maxBudget" value={sidebardata.maxBudget} onChange={handleChange} type="number" placeholder="Max" className="bg-[#1f1f1f] border border-yellow-500 text-yellow-200 rounded-lg p-3 w-full" />
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="font-semibold">Min Area (sqft):</label>
+              <input id="minArea" value={sidebardata.minArea} onChange={handleChange} type="number" placeholder="Min" className="bg-[#1f1f1f] border border-yellow-500 text-yellow-200 rounded-lg p-3 w-full" />
+            </div>
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="font-semibold">Max Area (sqft):</label>
+              <input id="maxArea" value={sidebardata.maxArea} onChange={handleChange} type="number" placeholder="Max" className="bg-[#1f1f1f] border border-yellow-500 text-yellow-200 rounded-lg p-3 w-full" />
+            </div>
+          </div>
+          {areaError && (
+            <p className="text-red-400 text-sm mt-1">{areaError}</p>
+          )}
 
           <div className="flex flex-col gap-2">
             <label className="font-semibold">Amenities:</label>

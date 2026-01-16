@@ -6,9 +6,31 @@ const RecentlyVisited = () => {
 
   useEffect(() => {
     try {
-      const storedListings = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
-      // Reverse to show most recent first
-      setRecentListings([...storedListings].reverse());
+      const stored = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+      // If entries are IDs (strings), fetch full listing objects
+      const areIds = stored.length > 0 && typeof stored[0] === 'string';
+      if (areIds) {
+        // fetch listings in parallel but keep order
+        Promise.all(stored.map(async (id) => {
+          try {
+            const res = await fetch(`/api/listing/get/${id}`);
+            if (!res.ok) return null;
+            const text = await res.text();
+            return text ? JSON.parse(text) : null;
+          } catch (err) {
+            return null;
+          }
+        })).then((items) => {
+          const filtered = items.filter(Boolean);
+          setRecentListings(filtered.reverse());
+        }).catch((err) => {
+          console.error('Failed to fetch recently viewed listings', err);
+          setRecentListings([]);
+        });
+      } else {
+        // already objects
+        setRecentListings([...stored].reverse());
+      }
     } catch (error) {
       console.error('Error reading recently viewed listings from localStorage:', error);
       setRecentListings([]);
@@ -34,7 +56,7 @@ const RecentlyVisited = () => {
       <div className="flex overflow-x-auto space-x-6 py-4 scrollbar-thin scrollbar-thumb-yellow-500 scrollbar-track-transparent">
         {recentListings.map((listing) => (
           <div
-            key={listing._id}
+            key={listing && (listing._id || listing.id) ? (listing._id || listing.id) : String(listing)}
             className="min-w-[320px] transform transition duration-300 hover:scale-105 hover:shadow-[0_0_25px_#facc15] bg-gradient-to-tr from-yellow-200/10 via-white/5 to-yellow-200/10 rounded-xl p-1"
           >
             <div className="bg-white rounded-xl overflow-hidden shadow-lg">

@@ -16,6 +16,7 @@ import RecentlyVisited from './components/RecentlyVisited'; // Adjust path if ne
 import FavoritesPage from './components/FavoritesPage';
 import ComparePage from './components/Compare'; // NEW
 import Contact from './pages/ContactUs';
+import Recommended from './pages/Recommended';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route path='/search' element={<Search />} />
         <Route path='/listing/:listingId' element={<Listing />} />
         <Route path='/favorites' element={<FavoritesPage />} />
+        <Route path='/recommended' element={<Recommended />} />
         <Route path='/faq' element={<Faq />} />
         <Route path='/compare' element={<ComparePage />} /> {/* NEW */}
         <Route path='/contact' element={<Contact />} />

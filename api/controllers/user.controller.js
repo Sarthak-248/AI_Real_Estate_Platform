@@ -3,6 +3,41 @@ import User from '../models/user.model.js';
 import { errorHandler } from '../utils/error.js';
 import Listing from '../models/listing.model.js';
 
+export const toggleFavorite = async (req, res, next) => {
+  try {
+    const listingId = req.params.listingId;
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return next(errorHandler(404, 'User not found!'));
+    }
+
+    let favorites = user.favorites || [];
+    
+    // Toggle logic
+    if (favorites.includes(listingId)) {
+        favorites = favorites.filter(id => id !== listingId);
+    } else {
+        favorites.push(listingId);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        $set: {
+            favorites: favorites
+        }
+      },
+      { new: true }
+    );
+    
+    const { password, ...rest } = updatedUser._doc;
+    res.status(200).json(rest);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const test = (req, res) => {
   res.json({
     message: 'Api route is working!',

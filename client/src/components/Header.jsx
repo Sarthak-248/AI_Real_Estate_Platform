@@ -1,33 +1,31 @@
-import { FaSearch, FaHeart, FaClock } from 'react-icons/fa';
+import { FaCalculator, FaHeart, FaClock } from 'react-icons/fa';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import Logo from '../assets/images/Logo.png'; // ✅ Import the logo image
+import PricePredictionModal from './PricePredictionModal';
 
 export default function Header() {
   const { currentUser } = useSelector((state) => state.user);
-  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const urlParams = new URLSearchParams(window.location.search);
-    urlParams.set('searchTerm', searchTerm);
-    const searchQuery = urlParams.toString();
-    navigate(`/search?${searchQuery}`);
-  };
+  const [isPredictionModalOpen, setIsPredictionModalOpen] = useState(false);
+  const [localFavorites, setLocalFavorites] = useState([]);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const searchTermFromUrl = urlParams.get('searchTerm');
-    if (searchTermFromUrl) {
-      setSearchTerm(searchTermFromUrl);
-    }
-  }, [location.search]);
+     const updateLocalFavs = () => {
+         setLocalFavorites(JSON.parse(localStorage.getItem('favorites')) || []);
+     };
+     updateLocalFavs();
+     window.addEventListener('favoritesUpdated', updateLocalFavs);
+     return () => window.removeEventListener('favoritesUpdated', updateLocalFavs);
+  }, []);
 
-  const favoriteListings = JSON.parse(localStorage.getItem('favorites')) || [];
-  const favoriteCount = favoriteListings.length;
+  const favoriteCount = currentUser ? (currentUser.favorites?.length || 0) : localFavorites.length;
+
+  const handlePricePrediction = () => {
+    setIsPredictionModalOpen(true);
+  };
 
   return (
     <>
@@ -57,22 +55,15 @@ export default function Header() {
             </h1>
           </Link>
 
-          {/* Search Bar */}
-          <form
-            onSubmit={handleSubmit}
-            className="bg-black/20 backdrop-blur-sm border border-yellow-400 rounded-full px-4 py-2 flex items-center shadow-lg"
+          {/* Price Prediction Button */}
+          <button
+            onClick={handlePricePrediction}
+            className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black rounded-full shadow-lg hover:from-yellow-300 hover:to-yellow-400 transition font-semibold"
+            title="Predict Property Price"
           >
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-transparent text-yellow-200 placeholder-yellow-300 focus:outline-none w-24 sm:w-64"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button type="submit">
-              <FaSearch className="text-yellow-400 hover:text-yellow-300 transition" />
-            </button>
-          </form>
+            <FaCalculator className="text-black" />
+            <span>Predict Price</span>
+          </button>
 
           {/* Navigation Items */}
           <ul className="flex gap-4 items-center">
@@ -87,11 +78,30 @@ export default function Header() {
               </li>
             </Link>
 
+            {/* Price Prediction Button (Mobile) */}
+            <button
+              onClick={handlePricePrediction}
+              className="md:hidden flex items-center gap-1 px-2 py-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-950 rounded-full shadow hover:from-yellow-300 hover:to-yellow-400 transition font-bold"
+              title="Predict Property Price"
+            >
+              <FaCalculator className="text-blue-950 text-sm" />
+            </button>
+
             {/* Recently Viewed Button */}
             <Link to="/recently-visited">
               <li className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-yellow-500 text-black rounded-full shadow hover:bg-yellow-400 transition font-semibold">
                 <FaClock className="text-black" />
                 <span className="hidden sm:inline">Recently Viewed</span>
+              </li>
+            </Link>
+
+            {/* Recommended Button */}
+            <Link to="/recommended">
+              <li className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-yellow-500 text-black rounded-full shadow hover:bg-yellow-400 transition font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-black" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L3 5v6c0 5.25 3.58 9.86 8.5 11 4.92-1.14 8.5-5.75 8.5-11V5l-9-3zM12 13.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
+                </svg>
+                <span className="hidden sm:inline">Recommended</span>
               </li>
             </Link>
 
@@ -134,6 +144,12 @@ export default function Header() {
           </ul>
         </div>
       </header>
+
+      {/* Price Prediction Modal */}
+      <PricePredictionModal 
+        isOpen={isPredictionModalOpen} 
+        onClose={() => setIsPredictionModalOpen(false)} 
+      />
     </>
   );
 }

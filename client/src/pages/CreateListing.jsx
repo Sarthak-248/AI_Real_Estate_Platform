@@ -17,10 +17,13 @@ export default function CreateListing() {
     name: '',
     description: '',
     address: '',
+    city: '',
+    areaSqFt: '',
+    age: '',
     type: 'rent',
-    bedrooms: 1,
-    bathrooms: 1,
-    regularPrice: 50,
+    bedrooms: 0,
+    bathrooms: 0,
+    regularPrice: '',
     discountPrice: 0,
     offer: false,
     parking: false,
@@ -155,6 +158,25 @@ export default function CreateListing() {
           />
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <input
+            type="text"
+            id="city"
+            value={formData.city}
+            onChange={handleChange}
+            placeholder="City"
+            className="w-full px-4 py-3 bg-white/20 rounded-lg placeholder-white focus:outline-none focus:ring-2 focus:ring-[#FFEB3B]"
+          />
+          <input
+            type="number"
+            id="areaSqFt"
+            value={formData.areaSqFt}
+            onChange={handleChange}
+            placeholder="Area (sqft)"
+            className="w-full px-4 py-3 bg-white/20 rounded-lg placeholder-white focus:outline-none focus:ring-2 focus:ring-[#FFEB3B]"
+          />
+        </div>
+
         <textarea
           id="description"
           required
@@ -205,6 +227,16 @@ export default function CreateListing() {
               className="px-4 py-3 bg-white/20 rounded-lg placeholder-white focus:outline-none focus:ring-2 focus:ring-[#FFEB3B]"
             />
           )}
+          <input
+            type="number"
+            id="age"
+            value={formData.age}
+            onChange={handleChange}
+            min="0"
+            max="200"
+            placeholder="Property Age (years)"
+            className="px-4 py-3 bg-white/20 rounded-lg placeholder-white focus:outline-none focus:ring-2 focus:ring-[#FFEB3B]"
+          />
         </div>
 
         {/* Image Upload */}
