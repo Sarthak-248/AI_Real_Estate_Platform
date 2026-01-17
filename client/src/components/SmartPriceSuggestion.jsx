@@ -38,7 +38,9 @@ export default function SmartPriceSuggestion({ formData }) {
   /**
    * Fetch price prediction from backend with Polling/Retry logic
    */
-  const fetchPricePrediction = async (retryCount = 0) => {
+  const fetchPricePrediction = async (arg = 0) => {
+    // If called from UI event or effect, arg might be weird. Ensure number.
+    const retryCount = typeof arg === 'number' ? arg : 0;
     const MAX_RETRIES = 10;
     
     try {

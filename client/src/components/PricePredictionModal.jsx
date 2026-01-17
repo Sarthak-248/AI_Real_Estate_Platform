@@ -29,7 +29,9 @@ export default function PricePredictionModal({ isOpen, onClose }) {
     }));
   };
 
-  const handlePredict = useCallback(async (retryCount = 0) => {
+  const handlePredict = useCallback(async (arg = 0) => {
+    // If called from UI event, arg is an event object. If recursive retry, it's a number.
+    const retryCount = typeof arg === 'number' ? arg : 0;
     const MAX_RETRIES = 10;
 
     // Validate inputs only on first attempt
