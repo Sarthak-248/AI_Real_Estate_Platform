@@ -19,7 +19,7 @@ if (!AI_SERVICE_URL.startsWith('http')) {
 }
 
 const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 120000; // 120s
-const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 5;
+const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 20; // Increased to cover full cold start duration
 
 // ============================================================================
 // ======================== UTILITY FUNCTIONS ================================
