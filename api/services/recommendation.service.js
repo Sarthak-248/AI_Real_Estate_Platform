@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 
-const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 120000;
-const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 20; // Increased to cover full cold start duration
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 40000; // 40s
+const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 1; // Single attempt (Let frontend poll)
 
 // Parse and format the AI Service URL
 let AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';

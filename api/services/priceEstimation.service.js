@@ -18,8 +18,8 @@ if (!AI_SERVICE_URL.startsWith('http')) {
   AI_SERVICE_URL = `https://${AI_SERVICE_URL}`;
 }
 
-const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 45000; // 45s (Keep under Render's 100s limit)
-const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 5;
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 40000; // 40s (Allows time for one retry loop within frontend 60s timeout)
+const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 1; // Single attempt per request (Frontend handles polling)
 
 // ============================================================================
 // ======================== UTILITY FUNCTIONS ================================
