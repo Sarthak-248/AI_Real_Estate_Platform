@@ -23,7 +23,7 @@ services:
         fromService:
           type: web
           name: estate-ai-service
-          property: url
+          property: host
       - key: MONGO
         sync: false
       - key: JWT_SECRET

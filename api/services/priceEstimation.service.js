@@ -13,7 +13,11 @@
 import fetch from 'node-fetch';
 import Listing from '../models/listing.model.js';
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+let AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+if (!AI_SERVICE_URL.startsWith('http')) {
+  AI_SERVICE_URL = `https://${AI_SERVICE_URL}`;
+}
+
 const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 5000;
 const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 3;
 
