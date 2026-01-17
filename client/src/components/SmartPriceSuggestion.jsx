@@ -36,12 +36,16 @@ export default function SmartPriceSuggestion({ formData }) {
   };
 
   /**
-   * Fetch price prediction from backend
+   * Fetch price prediction from backend with Polling/Retry logic
    */
-  const fetchPricePrediction = async () => {
+  const fetchPricePrediction = async (retryCount = 0) => {
+    const MAX_RETRIES = 10;
+    
     try {
-      setError(null);
-      setLoading(true);
+      if (retryCount === 0) {
+          setError(null);
+          setLoading(true);
+      }
 
       const propertyData = {
         areaSqFt: Number(formData.areaSqFt) || 1000,
@@ -52,20 +56,43 @@ export default function SmartPriceSuggestion({ formData }) {
         city: formData.city,
       };
 
+      console.log(`[SmartPrice] Requesting prediction (Attempt ${retryCount + 1})...`);
       const response = await axios.post('/api/price-estimate/predict', propertyData, {
-        timeout: 120000, // 120 seconds timeout for frontend request
+        timeout: 60000, // 60s timeout for frontend
       });
 
+      // Handle Success
       if (response.data.success) {
         setPrediction(response.data);
-      } else {
+        setLoading(false);
+      } 
+      // Handle "Waking Up" signal (status 202) OR explicit waking_up status
+      else if (response.status === 202 || response.data.status === 'waking_up') {
+          if (retryCount < MAX_RETRIES) {
+              console.log('[SmartPrice] Service waking up. Retrying in 5s...');
+              setTimeout(() => fetchPricePrediction(retryCount + 1), 5000);
+          } else {
+              setError('AI Service is taking too long to wake up. Please try again later.');
+              setLoading(false);
+          }
+      }
+      // Handle other errors
+      else {
         setError(response.data.message || 'Failed to predict price');
+        setLoading(false);
       }
     } catch (err) {
       console.error('Price prediction error:', err);
+      
+      // If network error (connection closed) or timeout, assume waking up and retry
+      if (retryCount < MAX_RETRIES && (err.code === 'ECONNABORTED' || err.message.includes('Network Error'))) {
+           console.log('[SmartPrice] Network timeout (likely waking up). Retrying in 5s...');
+           setTimeout(() => fetchPricePrediction(retryCount + 1), 5000);
+           return;
+      }
+
       // Non-blocking error - don't prevent form submission
       setError('Could not estimate price. AI service unavailable.');
-    } finally {
       setLoading(false);
     }
   };

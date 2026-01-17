@@ -52,18 +52,30 @@ export async function predictPrice(req, res, next) {
         message: 'Property data is required',
       });
     }
+  
+    try {
+      console.log('[predictPrice] Calling service.predictPrice');
+      // Call service to predict price
+      const prediction = await PriceEstimationService.predictPrice(propertyData);
 
-    console.log('[predictPrice] Calling service.predictPrice');
+      console.log('[predictPrice] Got prediction:', prediction);
 
-    // Call service to predict price
-    const prediction = await PriceEstimationService.predictPrice(propertyData);
+      return res.status(200).json({
+        success: true,
+        ...prediction,
+      });
+    } catch (err) {
+      if (err.message.includes('waking up') || err.message.includes('503') || err.message.includes('502') || err.message.includes('timeout')) {
+         return res.status(202).json({
+            success: false,
+            status: 'waking_up',
+            message: 'AI Service is waking up. Please retry in a few seconds.',
+            retryAfter: 5
+         });
+      }
+      throw err;
+    }
 
-    console.log('[predictPrice] Got prediction:', prediction);
-
-    return res.status(200).json({
-      success: true,
-      ...prediction,
-    });
   } catch (error) {
     console.error('[predictPrice error]:', error.message);
     console.error('[predictPrice stack]:', error.stack);
