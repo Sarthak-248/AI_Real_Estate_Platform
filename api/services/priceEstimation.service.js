@@ -25,7 +25,41 @@ const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 5;
 // ======================== UTILITY FUNCTIONS ================================
 // ============================================================================
 
-// ... (existing code)
+/**
+ * Extract city name from address string.
+ * Expected format: "street, city, state"
+ * Falls back to address if parsing fails.
+ */
+function extractCity(address) {
+  if (!address || typeof address !== 'string') return 'unknown';
+  const parts = address.split(',').map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 0) return 'unknown';
+  // Return second-to-last part (typically city)
+  return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+}
+
+/**
+ * Normalize array of values to [0, 1] range.
+ * Handles edge case where all values are identical.
+ */
+function normalize(values) {
+  if (values.length === 0) return [];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (max === min) return values.map(() => 0.5);
+  return values.map((v) => (v - min) / (max - min));
+}
+
+/**
+ * Calculate property age in years from createdAt timestamp.
+ */
+function calculatePropertyAge(createdAtDate) {
+  if (!createdAtDate) return 0;
+  const now = new Date();
+  const createdDate = new Date(createdAtDate);
+  const ageMs = now.getTime() - createdDate.getTime();
+  return Math.floor(ageMs / (1000 * 60 * 60 * 24 * 365.25));
+}
 
 /**
  * Fetch with automatic retry on network failure or 503s.
@@ -253,7 +287,9 @@ class PriceEstimationService {
       else if (typeStr === 'sale') typeCode = 1.0;
 
       // Calculate property age (default 0 for new listings)
-      const propertyAge = Math.floor(calculatePropertyAge(propertyData.createdAt || null));
+      // Check if helper exists, if not define it inline or ensure it's imported
+      // In this file scope, calculatePropertyAge function is defined at the top.
+      const propertyAge = calculatePropertyAge(propertyData.createdAt || null);
 
       // Build feature vector matching ML service expectations
       const features = {
