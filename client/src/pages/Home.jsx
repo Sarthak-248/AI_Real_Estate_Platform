@@ -17,6 +17,18 @@ export default function Home() {
   const [rentListings, setRentListings] = useState([]);
 
   useEffect(() => {
+    // Warm up the AI service silently when the Home page loads
+    // This helps mitigate the cold-start delay on the free tier
+    const warmUpAiService = async () => {
+      try {
+        await fetch('/api/price-estimate/health');
+        console.log('AI Service warm-up ping sent');
+      } catch (err) {
+        // Ignore warm-up errors
+      }
+    };
+    warmUpAiService();
+
     const fetchOfferListings = async () => {
       try {
         const res = await fetch(`/api/listing/get?offer=true&limit=4`);
