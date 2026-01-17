@@ -17,16 +17,37 @@ export default function Home() {
   const [rentListings, setRentListings] = useState([]);
 
   useEffect(() => {
-    // Warm up the AI service silently when the Home page loads
-    // This helps mitigate the cold-start delay on the free tier
+    // Persistent Warm-up: Keep pinging until it wakes up
     const warmUpAiService = async () => {
-      try {
-        await fetch('/api/price-estimate/health');
-        console.log('AI Service warm-up ping sent');
-      } catch (err) {
-        // Ignore warm-up errors
+      let attempts = 0;
+      const maxAttempts = 20; // Try for ~3 minutes in background
+
+      const ping = async () => {
+        try {
+          console.log(`[Home] Warm-up ping ${attempts + 1}...`);
+          const res = await fetch('/api/price-estimate/health');
+          if (res.ok) {
+            console.log('[Home] AI Service is READY!');
+            return true; // Stop
+          } else {
+             console.log('[Home] AI Service asleep (503/202).');
+             return false; // Continue
+          }
+        } catch (err) {
+           console.log('[Home] Warm-up failed (network).');
+           return false;
+        }
+      };
+
+      // Loop
+      while (attempts < maxAttempts) {
+        const success = await ping();
+        if (success) break;
+        attempts++;
+        await new Promise(r => setTimeout(r, 10000)); // Wait 10s between pings
       }
     };
+    
     warmUpAiService();
 
     const fetchOfferListings = async () => {

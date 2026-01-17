@@ -32,7 +32,7 @@ export default function PricePredictionModal({ isOpen, onClose }) {
   const handlePredict = useCallback(async (arg = 0) => {
     // If called from UI event, arg is an event object. If recursive retry, it's a number.
     const retryCount = typeof arg === 'number' ? arg : 0;
-    const MAX_RETRIES = 30; // Increased to 30 to cover 2-3 minute cold starts (30 * 5s = 150s)
+    const MAX_RETRIES = 60; // Increased to 60 (5 minutes coverage) for extremely slow free tier starts
 
     // Validate inputs only on first attempt
     if (retryCount === 0) {
