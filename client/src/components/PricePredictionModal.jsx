@@ -29,26 +29,31 @@ export default function PricePredictionModal({ isOpen, onClose }) {
     }));
   };
 
-  const handlePredict = useCallback(async () => {
-    // Validate inputs
-    if (!formData.areaSqFt || formData.areaSqFt <= 0) {
-      setError('Please enter valid area (sq ft)');
-      return;
-    }
-    if (formData.bedrooms < 1 || formData.bedrooms > 10) {
-      setError('Bedrooms should be between 1 and 10');
-      return;
-    }
-    if (formData.bathrooms < 1 || formData.bathrooms > 10) {
-      setError('Bathrooms should be between 1 and 10');
-      return;
-    }
+  const handlePredict = useCallback(async (retryCount = 0) => {
+    const MAX_RETRIES = 10;
 
-    setLoading(true);
-    setError('');
-    setPrediction(null);
+    // Validate inputs only on first attempt
+    if (retryCount === 0) {
+        if (!formData.areaSqFt || formData.areaSqFt <= 0) {
+        setError('Please enter valid area (sq ft)');
+        return;
+        }
+        if (formData.bedrooms < 1 || formData.bedrooms > 10) {
+        setError('Bedrooms should be between 1 and 10');
+        return;
+        }
+        if (formData.bathrooms < 1 || formData.bathrooms > 10) {
+        setError('Bathrooms should be between 1 and 10');
+        return;
+        }
+
+        setLoading(true);
+        setError('');
+        setPrediction(null);
+    }
 
     try {
+      console.log(`[PriceModal] Requesting prediction (Attempt ${retryCount + 1})...`);
       const response = await axios.post('/api/price-estimate/predict', {
         areaSqFt: formData.areaSqFt,
         bedrooms: formData.bedrooms,
@@ -56,15 +61,45 @@ export default function PricePredictionModal({ isOpen, onClose }) {
         city: formData.city,
         type: formData.type,
         age: formData.age,
+      }, {
+        timeout: 60000 // 60s timeout
       });
 
-      setPrediction(response.data);
+      // Handle Success
+      if (response.data.success && response.data.predicted_price) {
+        setPrediction(response.data);
+        setLoading(false);
+      } 
+      // Handle "Waking Up" signal (status 202) OR explicit waking_up status
+      else if (response.status === 202 || response.data.status === 'waking_up') {
+          if (retryCount < MAX_RETRIES) {
+              console.log('[PriceModal] Service waking up. Retrying in 5s...');
+              setTimeout(() => handlePredict(retryCount + 1), 5000);
+          } else {
+              setError('AI Service is taking too long to wake up. Please try again later.');
+              setLoading(false);
+          }
+      }
+      // Handle other errors
+      else {
+        setError(response.data.message || 'Failed to predict price');
+        setLoading(false);
+      }
+
     } catch (err) {
+      console.error('[PriceModal] Error:', err);
+      
+      // If network error (connection closed) or timeout, assume waking up and retry
+      if (retryCount < MAX_RETRIES && (err.code === 'ECONNABORTED' || err.message.includes('Network Error'))) {
+           console.log('[PriceModal] Network timeout (likely waking up). Retrying in 5s...');
+           setTimeout(() => handlePredict(retryCount + 1), 5000);
+           return;
+      }
+
       setError(
         err.response?.data?.message ||
         'Failed to predict price. Please try again.'
       );
-    } finally {
       setLoading(false);
     }
   }, [formData]);
