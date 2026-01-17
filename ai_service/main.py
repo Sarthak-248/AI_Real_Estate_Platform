@@ -403,4 +403,6 @@ def model_status():
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host='127.0.0.1', port=8000)
+    # VITAL FOR RENDER: Listen on 0.0.0.0 and use the PORT environment variable
+    port = int(os.environ.get('PORT', 8000))
+    uvicorn.run(app, host='0.0.0.0', port=port)
