@@ -52,7 +52,9 @@ export default function SmartPriceSuggestion({ formData }) {
         city: formData.city,
       };
 
-      const response = await axios.post('/api/price-estimate/predict', propertyData);
+      const response = await axios.post('/api/price-estimate/predict', propertyData, {
+        timeout: 120000, // 120 seconds timeout for frontend request
+      });
 
       if (response.data.success) {
         setPrediction(response.data);
