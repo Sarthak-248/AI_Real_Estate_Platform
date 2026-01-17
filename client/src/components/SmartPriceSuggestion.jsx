@@ -63,6 +63,7 @@ export default function SmartPriceSuggestion({ formData }) {
 
       // Handle Success
       if (response.data.success) {
+        console.log('[SmartPrice] Prediction success:', response.data);
         setPrediction(response.data);
         setLoading(false);
       } 
