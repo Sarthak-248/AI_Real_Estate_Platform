@@ -32,7 +32,7 @@ export default function PricePredictionModal({ isOpen, onClose }) {
   const handlePredict = useCallback(async (arg = 0) => {
     // If called from UI event, arg is an event object. If recursive retry, it's a number.
     const retryCount = typeof arg === 'number' ? arg : 0;
-    const MAX_RETRIES = 10;
+    const MAX_RETRIES = 30; // Increased to 30 to cover 2-3 minute cold starts (30 * 5s = 150s)
 
     // Validate inputs only on first attempt
     if (retryCount === 0) {
@@ -75,10 +75,10 @@ export default function PricePredictionModal({ isOpen, onClose }) {
       // Handle "Waking Up" signal (status 202) OR explicit waking_up status
       else if (response.status === 202 || response.data.status === 'waking_up') {
           if (retryCount < MAX_RETRIES) {
-              console.log('[PriceModal] Service waking up. Retrying in 5s...');
+              console.log(`[PriceModal] Service waking up. Retrying in 5s... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
               setTimeout(() => handlePredict(retryCount + 1), 5000);
           } else {
-              setError('AI Service is taking too long to wake up. Please try again later.');
+              setError('AI Service is taking longer than expected to start. Please try again in a minute.');
               setLoading(false);
           }
       }

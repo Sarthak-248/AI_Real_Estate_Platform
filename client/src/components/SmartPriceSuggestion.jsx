@@ -41,7 +41,7 @@ export default function SmartPriceSuggestion({ formData }) {
   const fetchPricePrediction = async (arg = 0) => {
     // If called from UI event or effect, arg might be weird. Ensure number.
     const retryCount = typeof arg === 'number' ? arg : 0;
-    const MAX_RETRIES = 10;
+    const MAX_RETRIES = 30; // Increased to 30 to cover 2-3 minute cold starts
     
     try {
       if (retryCount === 0) {
@@ -72,10 +72,10 @@ export default function SmartPriceSuggestion({ formData }) {
       // Handle "Waking Up" signal (status 202) OR explicit waking_up status
       else if (response.status === 202 || response.data.status === 'waking_up') {
           if (retryCount < MAX_RETRIES) {
-              console.log('[SmartPrice] Service waking up. Retrying in 5s...');
+              console.log(`[SmartPrice] Service waking up. Retrying in 5s... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
               setTimeout(() => fetchPricePrediction(retryCount + 1), 5000);
           } else {
-              setError('AI Service is taking too long to wake up. Please try again later.');
+              setError('AI Service is taking longer than expected. Please try again later.');
               setLoading(false);
           }
       }
