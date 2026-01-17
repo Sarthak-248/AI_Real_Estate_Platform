@@ -20,7 +20,7 @@ export default function Home() {
     // Persistent Warm-up: Keep pinging until it wakes up
     const warmUpAiService = async () => {
       let attempts = 0;
-      const maxAttempts = 20; // Try for ~3 minutes in background
+      const maxAttempts = 50; // Try for ~8 minutes in background
 
       const ping = async () => {
         try {

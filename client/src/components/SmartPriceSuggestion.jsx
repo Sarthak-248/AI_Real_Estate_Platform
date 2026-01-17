@@ -41,7 +41,7 @@ export default function SmartPriceSuggestion({ formData }) {
   const fetchPricePrediction = async (arg = 0) => {
     // If called from UI event or effect, arg might be weird. Ensure number.
     const retryCount = typeof arg === 'number' ? arg : 0;
-    const MAX_RETRIES = 60; // 5 minutes max wait
+    const MAX_RETRIES = 120; // 10 minutes max wait
     
     try {
       if (retryCount === 0) {
