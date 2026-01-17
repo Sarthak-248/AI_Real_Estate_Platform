@@ -1,12 +1,51 @@
 import fetch from 'node-fetch';
 
-const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 50000;
-const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 2;
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 60000;
+const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 5;
 
 // Parse and format the AI Service URL
 let AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 if (!AI_SERVICE_URL.startsWith('http')) {
   AI_SERVICE_URL = `https://${AI_SERVICE_URL}`;
+}
+
+/**
+ * Fetch with automatic retry on network failure or 503s.
+ * Uses exponential backoff with a higher base to handle cold starts.
+ */
+async function fetchWithRetry(url, options = {}, retries = AI_REQUEST_RETRIES) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+         if (response.status === 503) {
+           throw new Error(`Service waking up (503)`);
+        }
+        throw new Error(`AI Service returned ${response.status}: ${response.statusText}`);
+      }
+
+      return response;
+    } catch (error) {
+      if (attempt === retries - 1) {
+         console.error(`[RecommendationService] All retries failed: ${error.message}`);
+         throw error;
+      }
+      
+      console.log(`[RecommendationService] Attempt ${attempt + 1}/${retries} failed: ${error.message}. Retrying...`);
+      // Backoff: 2s, 4s, 8s, 10s...
+      const backoffMs = Math.min(Math.pow(2, attempt) * 2000, 10000);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
 }
 
 function normalize(values) {

@@ -18,52 +18,18 @@ if (!AI_SERVICE_URL.startsWith('http')) {
   AI_SERVICE_URL = `https://${AI_SERVICE_URL}`;
 }
 
-const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 50000;
-const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 3;
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 60000; // 60s
+const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 5;
 
 // ============================================================================
 // ======================== UTILITY FUNCTIONS ================================
 // ============================================================================
 
-/**
- * Extract city name from address string.
- * Expected format: "street, city, state"
- * Falls back to address if parsing fails.
- */
-function extractCity(address) {
-  if (!address || typeof address !== 'string') return 'unknown';
-  const parts = address.split(',').map((s) => s.trim()).filter(Boolean);
-  if (parts.length === 0) return 'unknown';
-  // Return second-to-last part (typically city)
-  return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
-}
+// ... (existing code)
 
 /**
- * Normalize array of values to [0, 1] range.
- * Handles edge case where all values are identical.
- */
-function normalize(values) {
-  if (values.length === 0) return [];
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  if (max === min) return values.map(() => 0.5);
-  return values.map((v) => (v - min) / (max - min));
-}
-
-/**
- * Calculate property age in years from createdAt timestamp.
- */
-function calculatePropertyAge(createdAtDate) {
-  if (!createdAtDate) return 0;
-  const now = new Date();
-  const createdDate = new Date(createdAtDate);
-  const ageMs = now.getTime() - createdDate.getTime();
-  return Math.floor(ageMs / (1000 * 60 * 60 * 24 * 365.25));
-}
-
-/**
- * Fetch with automatic retry on network failure.
- * Uses exponential backoff: 100ms, 200ms, 400ms, etc.
+ * Fetch with automatic retry on network failure or 503s.
+ * Uses exponential backoff with a higher base to handle cold starts.
  */
 async function fetchWithRetry(url, options = {}, retries = AI_REQUEST_RETRIES) {
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -78,7 +44,12 @@ async function fetchWithRetry(url, options = {}, retries = AI_REQUEST_RETRIES) {
 
       clearTimeout(timeoutId);
 
+      // If service is unavailable (503) or request failed, throw to trigger retry
       if (!response.ok) {
+        // Special handling for 503 (Service Unavailable) which often means "waking up"
+        if (response.status === 503) {
+           throw new Error(`Service waking up (503)`);
+        }
         throw new Error(`AI Service returned ${response.status}: ${response.statusText}`);
       }
 
@@ -91,8 +62,11 @@ async function fetchWithRetry(url, options = {}, retries = AI_REQUEST_RETRIES) {
         );
       }
 
-      // Exponential backoff before retry
-      const backoffMs = Math.pow(2, attempt) * 100;
+      console.log(`[PriceService] Attempt ${attempt + 1}/${retries} failed: ${error.message}. Retrying...`);
+
+      // Aggressive backoff for cold starts: 2s, 4s, 8s, 10s...
+      // Cap at 10 seconds to avoid overly long waits
+      const backoffMs = Math.min(Math.pow(2, attempt) * 2000, 10000);
       await new Promise((resolve) => setTimeout(resolve, backoffMs));
     }
   }
