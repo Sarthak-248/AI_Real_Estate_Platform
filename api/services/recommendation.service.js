@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 60000;
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 120000;
 const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 5;
 
 // Parse and format the AI Service URL

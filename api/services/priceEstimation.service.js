@@ -18,7 +18,7 @@ if (!AI_SERVICE_URL.startsWith('http')) {
   AI_SERVICE_URL = `https://${AI_SERVICE_URL}`;
 }
 
-const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 60000; // 60s
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS) || 120000; // 120s
 const AI_REQUEST_RETRIES = Number(process.env.AI_REQUEST_RETRIES) || 5;
 
 // ============================================================================
