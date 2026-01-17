@@ -78,11 +78,11 @@ async function fetchWithRetry(url, options = {}, retries = AI_REQUEST_RETRIES) {
 
       clearTimeout(timeoutId);
 
-      // If service is unavailable (503) or request failed, throw to trigger retry
+      // If service is unavailable (503) or Bad Gateway (502), throw to trigger retry
       if (!response.ok) {
-        // Special handling for 503 (Service Unavailable) which often means "waking up"
-        if (response.status === 503) {
-           throw new Error(`Service waking up (503)`);
+        // Special handling for 503/502 which usually means "waking up" or "starting"
+        if (response.status === 503 || response.status === 502) {
+           throw new Error(`Service waking up (${response.status})`);
         }
         throw new Error(`AI Service returned ${response.status}: ${response.statusText}`);
       }

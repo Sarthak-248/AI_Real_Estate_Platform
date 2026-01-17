@@ -27,8 +27,8 @@ async function fetchWithRetry(url, options = {}, retries = AI_REQUEST_RETRIES) {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-         if (response.status === 503) {
-           throw new Error(`Service waking up (503)`);
+         if (response.status === 503 || response.status === 502) {
+           throw new Error(`Service waking up (${response.status})`);
         }
         throw new Error(`AI Service returned ${response.status}: ${response.statusText}`);
       }
